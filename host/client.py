@@ -10,6 +10,7 @@ from google import genai
 from google.genai import types
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import json
 
 load_dotenv() 
 
@@ -72,6 +73,9 @@ async def main():
 
                 handled = False
 
+                #test print
+                #print(gemini_response)
+
                 for part in gemini_response.candidates[0].content.parts:
                     if hasattr(part, "function_call") and part.function_call is not None:
                          fc = part.function_call
@@ -82,9 +86,10 @@ async def main():
 
                          response = client.models.generate_content(
                                  model="gemini-2.5-flash",
-                                 contents=f"""Hier sind die rohen Ergebnisse aus der Datenbank:
+                                 contents=f"""Du bist der Chatbot von der Informatik des Hochschule Bremerhaven. 
+                                 Der User fragte vorher etwas über die Module des Bereichs Informatik in der Hochschule Bremerhaven. Hier sind die Antworten:
                                  {tool_output}
-                                 Formuliere daraus bitte eine freundliche Antwort für den Nutzer, die erklärt, welche Module gefunden wurden."""
+                                 Formuliere daraus bitte eine freundliche Antwort für den Nutzer."""
                                  )
                          print(f"🤖 Bot: {response.text}")
 
