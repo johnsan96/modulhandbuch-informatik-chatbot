@@ -5,6 +5,10 @@ import json
 
 mcp = FastMCP("modulhandbuch")
 
+# ---------------------------------
+# sucht module nach gesuchtem Titel
+# ---------------------------------
+
 @mcp.tool()
 def get_modul_details(titel_suche: str) -> str:
     """ Liefert Deails zu einem Modul, das über den Titel gesucht wird """
@@ -38,6 +42,10 @@ def get_modul_details(titel_suche: str) -> str:
         f"- Verantwortlich: {verantwortlich}\n"
         f"- Fachsemester: {fachsemester}"
     )
+
+# -----------------------------------------------------------------------------
+# sucht module nach Stichwort und weiteren Filtern wie Semestern, ECTS, Pflicht
+# -----------------------------------------------------------------------------
 
 @mcp.tool()
 def query_modules(
@@ -90,8 +98,54 @@ def query_modules(
 
     return json.dumps(results, ensure_ascii=False, indent=2)
 
+# ------------------------------------------------------------
+# sucht Literatur
+# ------------------------------------------------------------
 
+@mcp.tool()
+def get_modul_extras(titel: str) -> str:
+    """Liefert Inhalte, Kompetenzen, Medien und Literatur eines Moduls."""
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    data = {"inhalte": [], "kompetenzen": [], "medien": [], "literatur": []}
+    
+    # Erst Modul-ID über Titel bestimmen (case-insensitive)
+    cursor.execute("SELECT id FROM module WHERE LOWER(titel) = %s", (titel.lower(),))
+    row = cursor.fetchone()
+    if not row:
+        cursor.close()
+        conn.close()
+        return f"Kein Modul mit Titel '{titel}' gefunden."
+
+    modul_id = row["id"]
+
+    # Inhalte
+    cursor.execute("SELECT inhalt FROM modul_inhalte WHERE modul_id=%s", (modul_id,))
+    data["inhalte"] = [row["inhalt"] for row in cursor.fetchall()]
+
+    # Literatur
+    cursor.execute("SELECT autor, titel, isbn, verlag, jahr FROM modul_literatur WHERE modul_id=%s", (modul_id,))
+    data["literatur"] = cursor.fetchall()
+
+    # Medien
+    cursor.execute("SELECT medium FROM modul_medien WHERE modul_id=%s", (modul_id,))
+    data["medien"] = [row["medium"] for row in cursor.fetchall()]
+
+    # Kompetenzen
+    cursor.execute("SELECT typ, kompetenztext FROM modul_kompetenzen WHERE modul_id=%s", (modul_id,))
+    data["kompetenzen"] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+# ----------------------------------------------------------
 # these are test-tools, and not belongs to the actual topic
+# -----------------------------------------------------------
+
 @mcp.tool()
 async def get_all_users() -> list:
  """ Liefert Informationen zu Personen """

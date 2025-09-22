@@ -59,32 +59,20 @@ async def main():
             #         contents="Erkläre wie AI funktioniert ganz kurz in 1 satz"
             #        )
             #print(f"🤖 Gemini sagt: {response.text}")
-            
-            previous_tool_outputs = []
 
             while True:
                 user_input = input("\nQuery (exit zum Beenden): ")
                 if user_input.strip().lower() == "exit":
                     break
-                
-                user_prompt = f"""
-                    Du bist der Chatbot für die Informatik-Module an der Hochschule Bremerhaven. 
-                    Der Nutzer fragt: 
-                    {user_input}
 
-                    Wenn du vorherige Tool Antworten oder der nutzer fragt, was vorher das Thema war,  brauchts, die vorher in den Gesprächen benutzt wurden sind, kannst du auf diese Zugreifen:
-                    {chr(10).join(previous_tool_outputs)}
-                """
-                
                 gemini_response = client.models.generate_content(
                     model="gemini-2.5-flash",
-                    contents=user_prompt,
+                    contents=user_input,
                     config=config
                 )
-                
-                tool_outputs = []
+
                 handled = False
-                
+
                 #test print
                 #print(gemini_response)
 
@@ -96,42 +84,19 @@ async def main():
                          #print(f"✅ Ergebnis von {fc.name}:\n{result}")
                          tool_output = result.content[0].text
 
-                         tool_outputs.append(
-                            f"📌 Ergebnis von {fc.name}:\n{tool_output}"
-                         )
+                         response = client.models.generate_content(
+                                 model="gemini-2.5-flash",
+                                 contents=f"""Du bist der Chatbot von der Informatik des Hochschule Bremerhaven. 
+                                 Der User fragte vorher etwas über die Module des Bereichs Informatik in der Hochschule Bremerhaven. Hier sind die Antworten:
+                                 {tool_output}
+                                 Formuliere daraus bitte eine freundliche Antwort für den Nutzer."""
+                                 )
+                         print(f"🤖 Bot: {response.text}")
 
-                         previous_tool_outputs.append(tool_output)
                          handled = True
                     elif hasattr(part, "text"):
                          print(f"💬 Bot: {part.text}")
                          handled = True
-
-                if tool_outputs:
-
-                    print(tool_outputs)
-                    summary_prompt = f"""
-                    Du bist der Chatbot für die Informatik-Module an der Hochschule Bremerhaven.
-                    Der Nutzer hat nach Informationen gefragt. 
-                    
-                    Hier sind alle älteren Tool-Ergebnisse (also wenn der nutzer vorherige Gespräche wissen will, greife auf diese informationen zu, oder auch,
-                    wenn du vorherige Informationen brauchts):
-                    {chr(10).join(previous_tool_outputs)}
-
-                    Das ist seine aktuelle Frage: {user_input}
-
-                    Hier sind die Ergebnisse der internen Tools:
-
-                    {chr(10).join(tool_outputs)}
-
-                    Bitte fasse die Informationen für den Nutzer in einer klaren, freundlichen Antwort zusammen.
-                    """
-
-                    response = client.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents=summary_prompt
-                    )
-                    print(f"🤖 Bot (zusammengefasst): {response.text}")
-
                 if not handled:
                      print("⚠️ Keine Antwort vom Bot gefunden.")
     
